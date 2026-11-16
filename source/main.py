@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QPoint
 
 from brain import load_flywire_brain
-from fly_pet import FlyDesktopPet
+from fly_pet import FlyDesktopPet, keep_window_topmost
 
 
 class FlyManagerHUD(QWidget):
@@ -265,6 +265,7 @@ class FlyManagerHUD(QWidget):
         self._restore_anchor(old_br)
 
     def refresh_telemetry(self):
+        keep_window_topmost(self)
         count = len(self.flies)
         self.count_label.setText(f"Active Flies: {count}")
         self.remove_btn.setEnabled(count > 0)

@@ -1,3 +1,4 @@
+import ctypes
 import math
 import random
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QHBoxLayout
@@ -6,6 +7,25 @@ from PyQt6.QtGui import QPixmap, QPainter, QTransform, QCursor
 
 from brain import FlyBrain, BrainState
 
+
+HWND_TOPMOST = -1
+SWP_NOMOVE = 0x0002
+SWP_NOSIZE = 0x0001
+SWP_NOACTIVATE = 0x0010
+
+
+def keep_window_topmost(widget: QWidget):
+    """Re-assert Win32 HWND_TOPMOST without stealing focus from active apps."""
+    if hasattr(ctypes, "windll"):
+        ctypes.windll.user32.SetWindowPos(
+            int(widget.winId()),
+            HWND_TOPMOST,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
 
 class FlyDesktopPet(QWidget):
     """Transparent always-on-top desktop sprite with toggleable under-sprite badges."""
@@ -96,6 +116,17 @@ class FlyDesktopPet(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
         self.timer.start(30)
+
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+            | Qt.WindowType.WindowDoesNotAcceptFocus
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+
+        self._z_order_counter = 0
 
     @property
     def state(self) -> BrainState:
@@ -202,6 +233,11 @@ class FlyDesktopPet(QWidget):
         return neighbors
 
     def tick(self):
+        self._z_order_counter += 1
+        if self._z_order_counter >= 15:
+            self._z_order_counter = 0
+            keep_window_topmost(self)
+
         center_x, center_y = self.get_center()
 
         cursor_pos = QCursor.pos()
@@ -240,6 +276,17 @@ class FlyDesktopPet(QWidget):
         self.clamp_to_screen(heading)
         self.move(int(round(self.x_pos)), int(round(self.y_pos)))
         self.set_sprite_angle(self.brain.sprite_angle)
+
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+            | Qt.WindowType.WindowDoesNotAcceptFocus
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+
+        self._z_order_counter = 0
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
